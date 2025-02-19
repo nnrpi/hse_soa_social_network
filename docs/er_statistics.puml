@@ -1,0 +1,31 @@
+@startuml ER_Statistic_Service
+
+entity "Likes" {
+  * id : UUID
+  * source_id : UUID
+  * user_ids : List<UUID>
+  * created_timestamp : DateTime
+  * last_modified : DateTime
+}
+
+entity "Comments" {
+  * id : UUID
+  * source_id : UUID
+  * user_ids : List<UUID>
+  * created_timestamp : DateTime
+  * last_modified : DateTime
+}
+
+entity "Views" {
+  * id : UUID
+  * source_id : UUID
+  * user_ids : List<UUID>
+  * created_timestamp : DateTime
+  * last_modified : DateTime
+}
+
+Likes }o--|| Users : belongs_to
+Comments }o--|| Users : belongs_to
+Views }o--|| Users : belongs_to
+
+@enduml

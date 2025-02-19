@@ -1,0 +1,37 @@
+@startuml ER_User_Service
+
+entity "Users" {
+  * id : UUID
+  * username : String
+  * password_hash : String
+  * email : String
+  * registration_date : DateTime
+}
+
+entity "UserProfiles" {
+  * name : String
+  * surname : String
+  * phone_number : String
+  * birth_date : DateTime
+  * bio : String
+}
+
+enum SubscriptionStatus {
+    Sent = 0
+    Waiting = 1
+    Subscribed = 2
+    Declined = 3
+}
+
+entity "Subscriptions" {
+  * id : UUID
+  * subscriber_id : UUID
+  * subscribed_id : UUID
+  * subscribe_timestamp : DateTime
+  * status : SubscriptionStatus
+}
+
+Users ||--o{ UserProfiles : use
+Users ||--o{ Subscriptions : has
+Subscriptions ||--o{ SubscriptionStatus : use
+@enduml

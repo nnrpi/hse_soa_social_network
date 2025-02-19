@@ -1,0 +1,39 @@
+@startuml ER_Posts_Service
+
+entity "Posts" {
+  * id : UUID
+  * creator_id : UUID
+  * content : String
+  * create_timestamp : DateTime
+  * last_modified : DateTime
+  * likes : List<UUID>
+  * views : List<UUID>
+  * comments : List<UUID>
+  * hashtags : List<UUID>
+}
+
+entity "Comments" {
+  * id : UUID
+  * creator_id : UUID
+  * source_id : UUID
+  * content : String
+  * create_timestamp : DateTime
+  * last_modified : DateTime
+  * likes : List<UUID>
+  * views : List<UUID>
+  * comments : List<UUID>
+  * hashtags : List<UUID>
+}
+
+entity "Hashtags" {
+  * id : UUID
+  * hashtag_name : String
+  * created_timestamp : DateTime
+  * posts : List<UUID>
+  * comments : List<UUID>
+}
+
+Comments ||--o{ Hashtags : use
+Posts ||--o{ Hashtags : use
+Posts ||--o{ Comments : has
+@enduml
