@@ -1,0 +1,150 @@
+specification {
+    element userService {
+        style {
+            shape person
+            color green
+        }
+    }
+    element apiGateway {
+      style {
+          color red
+        }
+    }
+    element statisticsService {
+      style {
+        color red
+      }
+    }
+    element postsService {
+      style {
+        color amber
+      }
+    }
+    element container
+    element component
+}
+
+model {
+  apiGateway = container "API Gateway" {
+    description "Маршрутизация запросов и управление доступом"
+  }
+
+  users = userService "Users" {
+    description "Управление пользователями и аутентификация"
+
+    component userController "User Controller" "Обрабатывает HTTP запросы"
+    component authService "Auth Service" "Управляет аутентификацией"
+    component userServiceComponent "User Service" "Управляет данными пользователей"
+    component userRepository "User Repository" "Доступ к данным пользователей"
+    component kafkaProducer "Kafka Producer" "Отправляет события пользователей"
+    component grpcService "gRPC Service" "Предоставляет gRPC API"
+  }
+
+  statistics = statisticsService "Statistics service" {
+    description 'Сервис для сбора и просмотра статистики пользователей'
+
+    component postStatistics "Post statistics" "Количество лайков, просмотров и комментариев для поста"
+  }
+  
+  posts = postsService "Posts and comments" {
+    description 'Управление постами и комментариями'
+
+    component BasePost "Base Post" "Основа поста и комментария"
+    component Post
+    component Comment
+    component postPublisher "Post Publisher"
+    component commentPublisher "Comment Publisher"
+  }
+
+  postgresDbUsers = container "PostgreSQL" {
+    description "Хранение данных пользователей"
+    technology "Database"
+    style {
+      shape cylinder
+      color green
+    }
+    component users "Users" {
+      description 'id, username, password_hash, email, registration_date'
+    }
+    component user_profiles "User profiles" {
+      description 'name, surname, birth_date, phone_number, bio'
+    }
+    component subscriptions "Subscriptions" {
+      description 'id, subscriber_id, subscribed_id, subscribe_timestamp, status'
+    }
+  }
+
+  postgresDbPosts = container "PostgreSQL" {
+    description "Хранение данных постов"
+    technology "Database"
+    style {
+      shape cylinder
+      color amber
+    }
+    component posts "Posts" {
+      description 'id, creator_id, content, create_timestamp, last_modified, likes, comments, views, hashtags'
+    }
+    component comments "Comments" {
+      description 'id, creator_id, source_id, content, create_timestamp, last_modified, likes, comments, views, hashtags'
+    }
+    component tags "Hashtags" {
+      description 'id, hashtag_name, created_timestamp, posts, comments'
+    }
+  }
+
+  ClickhouseStatistics = container "Clickhouse" {
+    description "Хранение статистических данных"
+    technology "Database"
+    style {
+      shape cylinder
+      color red
+    }
+    component likes "Likes by post" {
+      description 'id, source_id, user_ids, created_timestamp, last_modified'
+    }
+    component comments "Comments by post" {
+      description 'id, source_id, user_ids, created_timestamp, last_modified'
+    }
+    component user_views "Views by post" {
+      description 'id, source_id, user_ids, created_timestamp, last_modified'
+    }
+  }
+
+  kafka = container "Kafka" {
+    description "Обмен событиями между сервисами"
+    technology "Message Broker"
+    style {
+      shape queue
+    }
+
+    component eventManager
+  }
+
+  users -> apiGateway "Использует" "HTTPS"
+  users -> postgresDbUsers
+  users -> kafka.eventManager "Make post / comment / view / like"
+
+  statistics -> ClickhouseStatistics
+  statistics -> apiGateway "Использует" "HTTPS"
+
+  posts -> postgresDbPosts
+  posts -> apiGateway "Использует" "HTTPS"
+  posts.BasePost -> posts.Post "Наследует"
+  posts.BasePost -> posts.Comment "Наследует"
+
+  apiGateway -> users.authService "Аутентификация"
+  apiGateway -> statistics.postStatistics "Get statistic for post"
+  apiGateway -> kafka.eventManager "Add event (view / like / comment)"
+  apiGateway -> posts.Post "Get posts"
+  apiGateway -> posts.Comment "Get comments"
+
+  kafka -> posts.postPublisher "Publish / edit post"
+  kafka -> posts.commentPublisher "Publish / edit comment"
+  kafka -> statistics "Add view / like / comment"
+}
+
+views {
+   view index {
+        include *
+    }
+}
