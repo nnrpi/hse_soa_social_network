@@ -1,0 +1,5 @@
+FROM --platform=linux/amd64 alpine:latest
+RUN apk --no-cache add ca-certificates tzdata
+WORKDIR /app
+COPY ./bin/user-service .
+CMD ["/app/user-service"]
