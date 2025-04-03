@@ -54,5 +54,5 @@ go test -v ./tests/unit/...
 
 ```
 podman run --name postgres-test -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=socialnetwork_test -p 5432:5432 -d postgres:14
-INTEGRATION_TEST=true go test -v ./tests/integration/...
+INTEGRATION_TEST=true go test -v ./tests/integration/user_tests... -count=1
 ```

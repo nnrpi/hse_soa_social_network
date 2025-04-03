@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,13 +11,51 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
+
+	"social-network/post-service/client"
+	proxyApi "social-network/proxy-service/api"
+	userRepository "social-network/user-service/repository"
+	userService "social-network/user-service/service"
 )
 
 func main() {
 	port := getEnv("PORT", "8080")
 	userServiceURL := getEnv("USER_SERVICE_URL", "http://user-service:8000")
+	postServiceURL := getEnv("POST_SERVICE_URL", "post-service:9000")
+
+	dbHost := getEnv("DB_HOST", "localhost")
+	dbPort := getEnv("DB_PORT", "5432")
+	dbUser := getEnv("DB_USER", "postgres")
+	dbPassword := getEnv("DB_PASSWORD", "postgres")
+	dbName := getEnv("DB_NAME", "social_network")
+
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		dbHost, dbPort, dbUser, dbPassword, dbName)
+
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer db.Close()
+
+	if err := db.Ping(); err != nil {
+		log.Fatalf("Failed to ping database: %v", err)
+	}
+	userRepo := userRepository.NewUserRepository(db)
+	sessionRepo := userRepository.NewSessionRepository(db)
+	userSvc := userService.NewUserService(userRepo, sessionRepo)
+
+	postClient, err := client.NewPostServiceClient(postServiceURL)
+	if err != nil {
+		log.Fatalf("Failed to connect to post service: %v", err)
+	}
+	defer postClient.Close()
 
 	router := mux.NewRouter()
+
+	postHandler := proxyApi.NewPostHandler(postClient, userSvc)
+	postHandler.RegisterRoutes(router)
 
 	targetURL, err := url.Parse(userServiceURL)
 	if err != nil {
@@ -52,6 +91,7 @@ func main() {
 	addr := fmt.Sprintf(":%s", port)
 	log.Printf("Proxy service starting on %s...", addr)
 	log.Printf("Proxying requests to user service at %s", userServiceURL)
+	log.Printf("Connected to post service at %s", postServiceURL)
 
 	if err := http.ListenAndServe(addr, router); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
