@@ -46,19 +46,6 @@ curl -X GET "http://localhost:8080/posts?page=1&page_size=10" -b cookies.txt
 curl -X DELETE http://localhost:8080/posts/{id} -b cookies.txt
 ```
 
-## Create promo:
-```
-curl -X POST http://localhost:8080/promos \
-  -H "Content-Type: application/json" \
-  -b cookies.txt \
-  -d '{"title":"Скидка 20%", "description":"Скидка на все товары", "discount":20, "code":"SALE20"}'
-```
-
-## Get promo list:
-```
-curl -X GET "http://localhost:8080/promos?page=1&page_size=10" -b cookies.txt
-```
-
 ## Log out:
 ```
 curl -X POST http://localhost:8080/auth/logout -b cookies.txt
