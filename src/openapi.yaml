@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Social Network API
   description: API for Social Network services
-  version: 1.0.0
+  version: 1.0.1
 servers:
   - url: http://localhost:8080
     description: Proxy service endpoint
@@ -10,9 +10,6 @@ paths:
   /auth/signin:
     post:
       summary: Register a new user
-      operationId: signIn
-      tags:
-        - auth
       requestBody:
         required: true
         content:
@@ -32,13 +29,10 @@ paths:
           description: Username or email already exists
         '500':
           description: Internal server error
-          
+  
   /auth/login:
     post:
       summary: Login a user
-      operationId: login
-      tags:
-        - auth
       requestBody:
         required: true
         content:
@@ -79,7 +73,8 @@ paths:
           description: Bad request
         '500':
           description: Internal server error
-          
+
+
   /users/profile:
     get:
       summary: Get full user profile information
@@ -101,8 +96,9 @@ paths:
           description: User not found
         '500':
           description: Internal server error
-          
-  /users/{username}:
+
+
+/users/{username}:
     get:
       summary: Get reduced user profile information by username
       operationId: getUserPublicProfile
@@ -125,7 +121,7 @@ paths:
           description: User not found
         '500':
           description: Internal server error
-          
+  
   /users/update:
     put:
       summary: Update user profile information
@@ -155,31 +151,305 @@ paths:
           description: User not found
         '500':
           description: Internal server error
-          
+  
+  /posts:
+    post:
+      summary: Создание нового поста
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePostRequest'
+      responses:
+        '201':
+          description: Пост успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: Неверный запрос
+        '401':
+          description: Не авторизован
+    
+    get:
+      summary: Получение списка постов
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Номер страницы
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+          description: Размер страницы
+      responses:
+        '200':
+          description: Список постов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  posts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Post'
+                  total_count:
+                    type: integer
+                  page:
+                    type: integer
+                  page_size:
+                    type: integer
+        '401':
+          description: Не авторизован
+  
+  /posts/{id}:
+    get:
+      summary: Получение поста по ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Данные поста
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '403':
+          description: Доступ запрещен (приватный пост)
+        '404':
+          description: Пост не найден
+    
+    put:
+      summary: Обновление поста
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePostRequest'
+      responses:
+        '200':
+          description: Пост успешно обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: Неверный запрос
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '404':
+          description: Пост не найден
+    
+    delete:
+      summary: Удаление поста
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Пост успешно удален
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '404':
+          description: Пост не найден
+  
+  /promos:
+    post:
+      summary: Создание нового промокода
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePromoRequest'
+      responses:
+        '201':
+          description: Промокод успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Promo'
+        '400':
+          description: Неверный запрос
+        '401':
+          description: Не авторизован
+    
+    get:
+      summary: Получение списка промокодов
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Номер страницы
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+          description: Размер страницы
+      responses:
+        '200':
+          description: Список промокодов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  promos:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Promo'
+                  total_count:
+                    type: integer
+                  page:
+                    type: integer
+                  page_size:
+                    type: integer
+        '401':
+          description: Не авторизован
+  
+  /promos/{id}:
+    get:
+      summary: Получение промокода по ID
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Данные промокода
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Promo'
+        '401':
+          description: Не авторизован
+        '404':
+          description: Промокод не найден
+    
+    put:
+      summary: Обновление промокода
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePromoRequest'
+      responses:
+        '200':
+          description: Промокод успешно обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Promo'
+        '400':
+          description: Неверный запрос
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '404':
+          description: Промокод не найден
+    
+    delete:
+      summary: Удаление промокода
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Промокод успешно удален
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '404':
+          description: Промокод не найден
+
 components:
   securitySchemes:
-    basicAuth:
-      type: http
-      scheme: basic
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session_token
+
   schemas:
     SignInRequest:
       type: object
       required:
         - username
-        - email
         - password
+        - email
       properties:
         username:
           type: string
           minLength: 3
           maxLength: 50
-        email:
-          type: string
-          format: email
         password:
           type: string
           minLength: 6
           maxLength: 100
+        email:
+          type: string
+          format: email
     
     LoginRequest:
       type: object
@@ -249,3 +519,136 @@ components:
           format: date
         phone_number:
           type: string
+    
+    CreatePostRequest:
+      type: object
+      required:
+        - title
+        - description
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+        is_private:
+          type: boolean
+          default: false
+        tags:
+          type: array
+          items:
+            type: string
+    
+    UpdatePostRequest:
+      type: object
+      required:
+        - title
+        - description
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+        is_private:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+    
+    Post:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        creator_id:
+          type: integer
+          format: int64
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        is_private:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+    
+    CreatePromoRequest:
+      type: object
+      required:
+        - title
+        - description
+        - discount
+        - code
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+        discount:
+          type: number
+          minimum: 0.01
+          maximum: 100
+        code:
+          type: string
+          minLength: 3
+          maxLength: 50
+    
+    UpdatePromoRequest:
+      type: object
+      required:
+        - title
+        - description
+        - discount
+        - code
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+        discount:
+          type: number
+          minimum: 0.01
+          maximum: 100
+        code:
+          type: string
+          minLength: 3
+          maxLength: 50
+    
+    Promo:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        creator_id:
+          type: integer
+          format: int64
+        discount:
+          type: number
+        code:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time

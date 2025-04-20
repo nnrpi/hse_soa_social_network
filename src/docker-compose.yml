@@ -11,8 +11,16 @@ services:
     environment:
       - PORT=8080
       - USER_SERVICE_URL=http://user-service:8000
+      - POST_SERVICE_URL=post-service:9000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=socialnetwork
     depends_on:
       - user-service
+      - post-service
+      - postgres
     networks:
       - social-network
 
@@ -31,7 +39,28 @@ services:
       - DB_PASSWORD=postgres
       - DB_NAME=socialnetwork
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    networks:
+      - social-network
+
+  post-service:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: ./post-service/Dockerfile.simple
+    ports:
+      - "9000:9000"
+    environment:
+      - PORT=9000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=socialnetwork
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - social-network
 
@@ -48,6 +77,11 @@ services:
       - "5432:5432"
     networks:
       - social-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 networks:
   social-network:
