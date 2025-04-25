@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Shopify/sarama"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 
@@ -26,6 +27,7 @@ func main() {
 	dbPassword := getEnv("DB_PASSWORD", "postgres")
 	dbName := getEnv("DB_NAME", "socialnetwork")
 	serverPort := getEnv("SERVER_PORT", "8000")
+	kafkaBroker := getEnv("KAFKA_BROKER", "kafka:9092")
 
 	dbConnectionString := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
@@ -60,6 +62,31 @@ func main() {
 	db.SetMaxIdleConns(5)
 	db.SetConnMaxLifetime(time.Hour)
 
+	kafkaConfig := sarama.NewConfig()
+	kafkaConfig.Producer.RequiredAcks = sarama.WaitForAll
+	kafkaConfig.Producer.Retry.Max = 10
+	kafkaConfig.Producer.Return.Successes = true
+
+	var kafkaProducer sarama.SyncProducer
+	for i := 0; i < maxRetries; i++ {
+		log.Printf("Attempting to connect to Kafka (attempt %d/%d)...", i+1, maxRetries)
+		kafkaProducer, err = sarama.NewSyncProducer([]string{kafkaBroker}, kafkaConfig)
+		if err == nil {
+			log.Println("Successfully connected to Kafka!")
+			break
+		}
+
+		log.Printf("Failed to connect to Kafka: %v", err)
+		if i < maxRetries-1 {
+			retryDelay := time.Duration(2<<uint(i)) * time.Second
+			log.Printf("Retrying in %v...", retryDelay)
+			time.Sleep(retryDelay)
+		} else {
+			log.Fatalf("Could not connect to Kafka after %d attempts", maxRetries)
+		}
+	}
+	defer kafkaProducer.Close()
+
 	userRepo := repository.NewUserRepository(db)
 	sessionRepo := repository.NewSessionRepository(db)
 
@@ -71,7 +98,7 @@ func main() {
 		log.Fatalf("Failed to initialize session repository: %v", err)
 	}
 
-	userService := service.NewUserService(userRepo, sessionRepo)
+	userService := service.NewUserService(userRepo, sessionRepo, kafkaProducer)
 	userHandler := api.NewUserHandler(userService)
 	router := mux.NewRouter()
 	userHandler.RegisterRoutes(router)

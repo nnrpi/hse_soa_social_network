@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Shopify/sarama"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 
@@ -23,6 +24,7 @@ func main() {
 	port := getEnv("PORT", "8080")
 	userServiceURL := getEnv("USER_SERVICE_URL", "http://user-service:8000")
 	postServiceURL := getEnv("POST_SERVICE_URL", "post-service:9000")
+	kafkaBroker := getEnv("KAFKA_BROKER", "kafka:9092")
 
 	dbHost := getEnv("DB_HOST", "localhost")
 	dbPort := getEnv("DB_PORT", "5432")
@@ -42,9 +44,21 @@ func main() {
 	if err := db.Ping(); err != nil {
 		log.Fatalf("Failed to ping database: %v", err)
 	}
+
+	kafkaConfig := sarama.NewConfig()
+	kafkaConfig.Producer.RequiredAcks = sarama.WaitForAll
+	kafkaConfig.Producer.Retry.Max = 10
+	kafkaConfig.Producer.Return.Successes = true
+
+	kafkaProducer, err := sarama.NewSyncProducer([]string{kafkaBroker}, kafkaConfig)
+	if err != nil {
+		log.Fatalf("Failed to setup Kafka producer: %v", err)
+	}
+	defer kafkaProducer.Close()
+
 	userRepo := userRepository.NewUserRepository(db)
 	sessionRepo := userRepository.NewSessionRepository(db)
-	userSvc := userService.NewUserService(userRepo, sessionRepo)
+	userSvc := userService.NewUserService(userRepo, sessionRepo, kafkaProducer)
 
 	postClient, err := client.NewPostServiceClient(postServiceURL)
 	if err != nil {
