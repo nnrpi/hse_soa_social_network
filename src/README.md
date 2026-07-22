@@ -7,6 +7,7 @@
 - `post-service/` - Сервис постов
 - `posts-api-service/` - REST API сервис для постов
 - `posts-grpc-service/` - gRPC сервис для постов
+- `statistics-service/` - Сервис статистики (Kafka → ClickHouse)
 - `bin/` - Скомпилированные бинарные файлы
 - `tests/` - Тесты
 

@@ -107,6 +107,51 @@ services:
     networks:
       - social-network
 
+  clickhouse:
+    platform: linux/amd64
+    image: clickhouse/clickhouse-server:24.3-alpine
+    environment:
+      - CLICKHOUSE_DB=statistics
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    ports:
+      - "8123:8123"
+      - "9001:9000"
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    networks:
+      - social-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  statistics-service:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: ./statistics-service/Dockerfile
+    ports:
+      - "8095:8095"
+    environment:
+      - PORT=8095
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=9000
+      - CLICKHOUSE_DB=statistics
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=
+      - KAFKA_BROKER=kafka:9092
+      - KAFKA_CONSUMER_GROUP=statistics-service
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - social-network
+
   postgres:
     platform: linux/amd64
     image: postgres:14
@@ -157,3 +202,4 @@ networks:
 
 volumes:
   postgres-data:
+  clickhouse-data:

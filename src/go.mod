@@ -5,6 +5,7 @@ go 1.23.0
 // toolchain go1.24.0
 
 require (
+	github.com/ClickHouse/clickhouse-go/v2 v2.40.1
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/Shopify/sarama v1.37.0
 	github.com/go-playground/validator/v10 v10.25.0
