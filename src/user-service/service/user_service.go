@@ -1,23 +1,55 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 
 	"social-network/user-service/models"
 	"social-network/user-service/repository"
+
+	"github.com/Shopify/sarama"
 )
 
 type UserService struct {
-	repo        *repository.UserRepository
-	sessionRepo *repository.SessionRepository
+	repo          *repository.UserRepository
+	sessionRepo   *repository.SessionRepository
+	kafkaProducer sarama.SyncProducer
 }
 
-func NewUserService(repo *repository.UserRepository, sessionRepo *repository.SessionRepository) *UserService {
+func NewUserService(repo *repository.UserRepository, sessionRepo *repository.SessionRepository, kafkaProducer sarama.SyncProducer) *UserService {
 	return &UserService{
-		repo:        repo,
-		sessionRepo: sessionRepo,
+		repo:          repo,
+		sessionRepo:   sessionRepo,
+		kafkaProducer: kafkaProducer,
+	}
+}
+
+func (s *UserService) sendUserRegistrationEvent(userID int64, username string) {
+	event := map[string]interface{}{
+		"event_type":        "user_registration",
+		"user_id":           userID,
+		"username":          username,
+		"registration_date": time.Now().Format(time.RFC3339),
+	}
+
+	jsonBytes, err := json.Marshal(event)
+	if err != nil {
+		fmt.Printf("Error marshaling event to JSON: %v\n", err)
+		return
+	}
+
+	msg := &sarama.ProducerMessage{
+		Topic: "user_registrations",
+		Value: sarama.StringEncoder(jsonBytes),
+	}
+
+	_, _, err = s.kafkaProducer.SendMessage(msg)
+	if err != nil {
+		fmt.Printf("Error sending message to Kafka: %v\n", err)
+	} else {
+		fmt.Printf("User registration event sent to Kafka for user: %s\n", username)
 	}
 }
 
@@ -67,6 +99,8 @@ func (s *UserService) SignIn(req *models.SignInRequest) (*models.AuthResponse, e
 	if err != nil {
 		return nil, err
 	}
+
+	s.sendUserRegistrationEvent(user.ID, user.Username)
 
 	return &models.AuthResponse{
 		Username: user.Username,
